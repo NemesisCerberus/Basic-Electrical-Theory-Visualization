@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron Flow vs. Conventional Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .circuit-canvas {
+            background-color: #ffffff; /* White background for canvas */
+            border-radius: 0.5rem; /* Tailwind rounded-lg */
+            border: 1px solid #d1d5db; /* Tailwind gray-300 */
+        }
+        .particle {
+            border-radius: 50%;
+        }
+        .label-box {
+            background-color: #e5e7eb; /* Tailwind gray-200 */
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            font-weight: 600;
+            font-size: 0.875rem; /* Tailwind text-sm */
+        }
+        /* Light bulb SVG styling */
+        .light-bulb-filament.on {
+            stroke: #fef08a; /* Tailwind yellow-200 for glow */
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px #facc15); /* Tailwind yellow-400 glow */
+        }
+        .light-bulb-glass.on {
+             fill: #fef9c3; /* Lighter yellow for bulb glass when on */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
+
+    <div class="w-full max-w-5xl bg-slate-800 shadow-2xl rounded-xl p-6 sm:p-8">
+        <header class="mb-6 sm:mb-8 text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-sky-400">Current Flow Theories Explained</h1>
+            <p class="text-slate-300 mt-2 text-sm sm:text-base">An interactive comparison of Electron Flow and Conventional Flow in a simple circuit.</p>
+        </header>
+
+        <div class="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
+            <button id="toggleSwitchBtn" class="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-all duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75">
+                Toggle Switch: OFF
+            </button>
+            <button id="resetAnimationBtn" class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-all duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-opacity-75">
+                Reset Animation
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            <div class="bg-slate-700 p-4 sm:p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-1 text-center text-sky-300">Electron Flow Theory</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mb-3 text-center">(Negative <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrow-right-short inline" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8z"/></svg> Positive)</p>
+                <canvas id="electronCanvas" class="w-full circuit-canvas" height="250"></canvas>
+                <p class="mt-4 text-sm text-slate-300 leading-relaxed">
+                    Electrons, being negatively charged, flow from the <strong class="text-sky-400">negative terminal</strong> of the power source, through the circuit, and return to the <strong class="text-sky-400">positive terminal</strong>. This is what physically happens in the conductor.
+                </p>
+            </div>
+
+            <div class="bg-slate-700 p-4 sm:p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-1 text-center text-amber-300">Conventional Flow Theory</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mb-3 text-center">(Positive <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrow-right-short inline" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8z"/></svg> Negative)</p>
+                <canvas id="conventionalCanvas" class="w-full circuit-canvas" height="250"></canvas>
+                <p class="mt-4 text-sm text-slate-300 leading-relaxed">
+                    Historically, before the discovery of the electron, current was assumed to flow from the <strong class="text-amber-400">positive terminal</strong> to the <strong class="text-amber-400">negative terminal</strong>. This convention is still widely used in circuit diagrams and component marking (e.g. diodes, transistors).
+                </p>
+            </div>
+        </div>
+         <footer class="mt-6 sm:mt-8 text-center text-xs text-slate-500">
+            <p>Use the "Toggle Switch" to start/stop the current flow. "Reset Animation" will restart the particles.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Get canvas elements and contexts
+        const electronCanvas = document.getElementById('electronCanvas');
+        const conventionalCanvas = document.getElementById('conventionalCanvas');
+        const eCtx = electronCanvas.getContext('2d');
+        const cCtx = conventionalCanvas.getContext('2d');
+
+        // Buttons
+        const toggleSwitchBtn = document.getElementById('toggleSwitchBtn');
+        const resetAnimationBtn = document.getElementById('resetAnimationBtn');
+
+        // Global state
+        let isCircuitOn = false;
+        let animationFrameId;
+
+        // Particle settings
+        const particleRadius = 4;
+        const particleSpeed = 1; 
+        const numParticles = 15;
+
+        // Arrays to hold particles for each theory
+        let electronParticles = [];
+        let conventionalParticles = [];
+
+        // Circuit component dimensions and positions (relative to canvas size)
+        // These will be calculated dynamically based on canvas width and height
+        let batteryWidth, batteryHeight, batteryX, batteryY;
+        let wireMargin, segmentLengthX, segmentLengthY;
+        let switchRadius, switchX, switchY, switchGap;
+        let loadRadiusX, loadRadiusY, loadX, loadY; // Using ellipse for bulb base
+        
+        // Path points for particles
+        let electronPath = [];
+        let conventionalPath = [];
+
+        // Function to set up dynamic dimensions based on canvas size
+        function setupDimensions(canvas) {
+            const cw = canvas.width;
+            const ch = canvas.height;
+
+            wireMargin = Math.min(cw, ch) * 0.15; // Margin from canvas edge for wires
+            batteryWidth = Math.min(cw, ch) * 0.1;
+            batteryHeight = Math.min(cw, ch) * 0.2;
+            batteryX = wireMargin; // Battery on the left
+            batteryY = ch / 2 - batteryHeight / 2;
+
+            segmentLengthX = cw - 2 * wireMargin - batteryWidth / 2; // Adjusted for battery center
+            segmentLengthY = ch - 2 * wireMargin;
+
+            switchRadius = Math.min(cw, ch) * 0.03;
+            switchX = batteryX + batteryWidth / 2 + segmentLengthX * 0.3; // Position on top wire
+            switchY = wireMargin;
+            switchGap = switchRadius * 2.5; // Gap for open switch
+
+            loadRadiusX = Math.min(cw, ch) * 0.05; // For bulb base
+            loadRadiusY = Math.min(cw, ch) * 0.03;
+            loadX = batteryX + batteryWidth / 2 + segmentLengthX; // Load on the right
+            loadY = ch / 2;
+        }
+
+
+        // Function to define the path for particles
+        function definePaths(canvas) {
+            const cw = canvas.width;
+            const ch = canvas.height;
+            setupDimensions(canvas); // Ensure dimensions are current
+
+            // Common points (corners of the main rectangle, battery terminals)
+            const batteryNegativeY = batteryY + batteryHeight * (3/4); // Lower part of battery
+            const batteryPositiveY = batteryY + batteryHeight * (1/4); // Upper part of battery
+            const batteryCenterX = batteryX + batteryWidth / 2;
+
+            const topLeft = { x: batteryCenterX, y: wireMargin };
+            const topRight = { x: batteryCenterX + segmentLengthX, y: wireMargin };
+            const bottomRight = { x: batteryCenterX + segmentLengthX, y: ch - wireMargin };
+            const bottomLeft = { x: batteryCenterX, y: ch - wireMargin };
+            
+            // Path for Electron Flow (Negative to Positive)
+            electronPath = [
+                { x: batteryCenterX, y: batteryNegativeY }, // Start at battery negative
+                { x: batteryCenterX, y: ch - wireMargin },   // Down to bottom-left corner
+                bottomRight,                                // Across to bottom-right corner
+                { x: topRight.x, y: loadY + loadRadiusY + 10}, // Up towards load (bottom of bulb)
+                { x: topRight.x, y: loadY - loadRadiusY - 10}, // Up through load (top of bulb)
+                topRight,                                   // To top-right corner
+                { x: switchX + switchGap / (isCircuitOn ? 2 : 1), y: wireMargin }, // To switch right
+                { x: switchX - switchGap / (isCircuitOn ? 2 : 1), y: wireMargin }, // Through switch to left
+                topLeft,                                    // Across to top-left corner
+                { x: batteryCenterX, y: batteryPositiveY }  // To battery positive
+            ];
+
+            // Path for Conventional Flow (Positive to Negative)
+            conventionalPath = [
+                { x: batteryCenterX, y: batteryPositiveY }, // Start at battery positive
+                topLeft,                                    // Across to top-left corner
+                { x: switchX - switchGap / (isCircuitOn ? 2 : 1), y: wireMargin }, // To switch left
+                { x: switchX + switchGap / (isCircuitOn ? 2 : 1), y: wireMargin }, // Through switch to right
+                topRight,                                   // Across to top-right corner
+                { x: topRight.x, y: loadY - loadRadiusY - 10}, // Down towards load (top of bulb)
+                { x: topRight.x, y: loadY + loadRadiusY + 10}, // Down through load (bottom of bulb)
+                bottomRight,                                // To bottom-right corner
+                bottomLeft,                                 // Across to bottom-left corner
+                { x: batteryCenterX, y: batteryNegativeY }  // To battery negative
+            ];
+        }
+
+
+        // Initialize particles along their paths
+        function initParticles(path, particlesArray) {
+            particlesArray.length = 0; // Clear existing particles
+            const totalPathLength = calculatePathLength(path);
+            const spacing = totalPathLength / numParticles;
+
+            let currentDistance = 0;
+            for (let i = 0; i < numParticles; i++) {
+                particlesArray.push({
+                    dist: currentDistance,
+                    pathIndex: 0, // Stores which segment of the path the particle is on
+                    pos: getPositionAtDistance(path, currentDistance)
+                });
+                currentDistance += spacing;
+            }
+        }
+        
+        // Helper to calculate total length of a path
+        function calculatePathLength(path) {
+            let totalLength = 0;
+            for (let i = 0; i < path.length -1; i++) {
+                const p1 = path[i];
+                const p2 = path[i+1];
+                totalLength += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+            }
+             // Add length from last point back to first if it's a closed loop conceptually
+            const pLast = path[path.length -1];
+            const pFirst = path[0]; // This is for conceptual loop, actual path is terminal to terminal
+            // totalLength += Math.sqrt(Math.pow(pFirst.x - pLast.x, 2) + Math.pow(pFirst.y - pLast.y, 2));
+            return totalLength;
+        }
+
+        // Helper to get a point along the path at a certain distance
+        function getPositionAtDistance(path, distance) {
+            let traveled = 0;
+            for (let i = 0; i < path.length -1; i++) {
+                const p1 = path[i];
+                const p2 = path[i+1];
+                const segmentLength = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+                if (distance <= traveled + segmentLength) {
+                    const remainingDist = distance - traveled;
+                    const ratio = remainingDist / segmentLength;
+                    return {
+                        x: p1.x + (p2.x - p1.x) * ratio,
+                        y: p1.y + (p2.y - p1.y) * ratio,
+                        segment: i // Store current segment
+                    };
+                }
+                traveled += segmentLength;
+            }
+            // If distance exceeds path length, wrap around (or return last point)
+            return { ...path[path.length - 1], segment: path.length - 2 };
+        }
+
+
+        // Function to draw the basic circuit components
+        function drawCircuit(ctx, canvas, theory) {
+            const cw = canvas.width;
+            const ch = canvas.height;
+            setupDimensions(canvas); // Recalculate dimensions based on current canvas size
+
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.strokeStyle = '#94a3b8'; // Tailwind slate-400 for wires
+            ctx.lineWidth = 3;
+
+            // Draw Wires (main rectangle)
+            ctx.beginPath();
+            const batteryTerminalOffset = batteryWidth / 2;
+            const pathPoints = [ // Simplified main loop for drawing wires
+                { x: batteryX + batteryTerminalOffset, y: wireMargin }, // Top-left wire start
+                { x: batteryX + batteryTerminalOffset + segmentLengthX, y: wireMargin }, // Top-right
+                { x: batteryX + batteryTerminalOffset + segmentLengthX, y: ch - wireMargin }, // Bottom-right
+                { x: batteryX + batteryTerminalOffset, y: ch - wireMargin }, // Bottom-left
+                { x: batteryX + batteryTerminalOffset, y: batteryY + batteryHeight * (3/4) } // To battery negative
+            ];
+            
+            ctx.moveTo(pathPoints[0].x, pathPoints[0].y); // Start top-left
+            // Top wire (with switch gap)
+            ctx.lineTo(switchX - switchGap / 2, wireMargin);
+            ctx.moveTo(switchX + switchGap / 2, wireMargin);
+            ctx.lineTo(pathPoints[1].x, pathPoints[1].y);
+            
+            // Right wire (with load)
+            ctx.lineTo(pathPoints[1].x, loadY - loadRadiusY - 15); // Wire to top of bulb
+            ctx.moveTo(pathPoints[2].x, loadY + loadRadiusY + 15); // Wire from bottom of bulb
+            ctx.lineTo(pathPoints[2].x, pathPoints[2].y);
+
+
+            // Bottom wire
+            ctx.lineTo(pathPoints[3].x, pathPoints[3].y);
+            // Left wire (to battery negative)
+            ctx.lineTo(pathPoints[4].x, pathPoints[4].y);
+            ctx.stroke();
+            
+            // Wire from top-left to battery positive
+            ctx.beginPath();
+            ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+            ctx.lineTo(batteryX + batteryTerminalOffset, batteryY + batteryHeight * (1/4));
+            ctx.stroke();
+
+
+            // Draw Battery
+            ctx.fillStyle = '#475569'; // Tailwind slate-600
+            ctx.fillRect(batteryX, batteryY, batteryWidth, batteryHeight);
+            // Positive terminal plate
+            ctx.fillStyle = '#f59e0b'; // Tailwind amber-500
+            ctx.fillRect(batteryX - batteryWidth*0.1, batteryY + batteryHeight * (1/8), batteryWidth*1.2, batteryHeight * (1/4));
+            // Negative terminal plate
+            ctx.fillStyle = '#64748b'; // Tailwind slate-500
+            ctx.fillRect(batteryX - batteryWidth*0.1, batteryY + batteryHeight * (5/8), batteryWidth*1.2, batteryHeight * (1/4));
+            
+            ctx.font = `${batteryHeight*0.2}px Arial`;
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText('+', batteryX + batteryWidth / 2, batteryY + batteryHeight * (1/4) + batteryHeight*0.07);
+            ctx.fillText('-', batteryX + batteryWidth / 2, batteryY + batteryHeight * (3/4) + batteryHeight*0.07);
+
+
+            // Draw Switch
+            ctx.fillStyle = '#64748b'; // Tailwind slate-500
+            ctx.beginPath();
+            ctx.arc(switchX - switchGap / 2, switchY, switchRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(switchX + switchGap / 2, switchY, switchRadius, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Switch lever
+            ctx.beginPath();
+            ctx.moveTo(switchX - switchGap / 2, switchY);
+            if (isCircuitOn) {
+                ctx.lineTo(switchX + switchGap / 2, switchY); // Closed
+            } else {
+                ctx.lineTo(switchX - switchGap / 2 + switchGap * 0.7, switchY - switchGap * 0.7); // Open
+            }
+            ctx.strokeStyle = '#64748b'; // Tailwind slate-500
+            ctx.lineWidth = switchRadius * 0.8;
+            ctx.stroke();
+            ctx.lineWidth = 3; // Reset line width
+
+            // Draw Load (Light Bulb)
+            const bulbGlassRadius = loadRadiusX * 1.8;
+            const bulbBaseY = loadY + loadRadiusY;
+            const bulbTipY = loadY - bulbGlassRadius * 1.5; // Top of the glass part
+
+            // Bulb Glass
+            ctx.beginPath();
+            ctx.arc(loadX, loadY - bulbGlassRadius * 0.5, bulbGlassRadius, Math.PI * 0.8, Math.PI * 0.2, true); // Dome
+            ctx.lineTo(loadX + loadRadiusX, loadY + loadRadiusY*0.5); // connect to base right
+            ctx.lineTo(loadX - loadRadiusX, loadY + loadRadiusY*0.5); // connect to base left
+            ctx.closePath();
+            ctx.fillStyle = isCircuitOn ? '#fef9c3' : '#cbd5e1'; // Tailwind yellow-100 (on) or slate-300 (off)
+            ctx.fill();
+            ctx.strokeStyle = '#94a3b8'; // Outline
+            ctx.stroke();
+
+            // Bulb Base (metallic part)
+            ctx.fillStyle = '#9ca3af'; // Tailwind gray-400
+            ctx.beginPath();
+            ctx.ellipse(loadX, loadY + loadRadiusY, loadRadiusX, loadRadiusY, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            // Base threads
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(loadX - loadRadiusX, loadY + loadRadiusY * (0.6 + i * 0.3));
+                ctx.lineTo(loadX + loadRadiusX, loadY + loadRadiusY * (0.6 + i * 0.3));
+                ctx.strokeStyle = '#6b7280'; // Darker gray
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+            ctx.lineWidth = 3; // Reset
+
+            // Filament (only if on)
+            if (isCircuitOn) {
+                ctx.beginPath();
+                ctx.moveTo(loadX - loadRadiusX * 0.3, loadY - loadRadiusY * 0.5);
+                ctx.quadraticCurveTo(loadX, loadY - loadRadiusY * 1.2, loadX + loadRadiusX * 0.3, loadY - loadRadiusY * 0.5);
+                ctx.strokeStyle = '#fcd34d'; // Tailwind amber-300
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+                 // Glow effect for filament (simple version)
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#facc15'; // Tailwind yellow-400
+                ctx.stroke(); // re-stroke to apply shadow
+                ctx.shadowBlur = 0; // reset shadow
+            }
+            
+            // Labels for terminals if needed (e.g., for clarity on canvas)
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            // Electron flow: Negative source, Positive sink
+            if (theory === 'electron') {
+                ctx.fillStyle = '#38bdf8'; // Sky-500
+                ctx.fillText('-', batteryX + batteryWidth / 2, batteryY + batteryHeight + 15);
+                ctx.fillText('+', batteryX + batteryWidth / 2, batteryY - 5);
+            }
+            // Conventional flow: Positive source, Negative sink
+            else if (theory === 'conventional') {
+                ctx.fillStyle = '#fbbf24'; // Amber-400
+                ctx.fillText('+', batteryX + batteryWidth / 2, batteryY - 5);
+                ctx.fillText('-', batteryX + batteryWidth / 2, batteryY + batteryHeight + 15);
+            }
+        }
+
+        // Update particle positions
+        function updateParticles(particlesArray, path, speed) {
+            if (!isCircuitOn) return;
+
+            const totalPathLength = calculatePathLength(path);
+            particlesArray.forEach(p => {
+                p.dist += speed;
+                if (p.dist > totalPathLength) {
+                    p.dist -= totalPathLength; // Wrap around
+                }
+                p.pos = getPositionAtDistance(path, p.dist);
+            });
+        }
+
+        // Draw particles
+        function drawParticles(ctx, particlesArray, color) {
+            if (!isCircuitOn) return;
+
+            particlesArray.forEach(p => {
+                if (p.pos) { // Ensure pos is defined
+                    ctx.beginPath();
+                    ctx.arc(p.pos.x, p.pos.y, particleRadius, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                }
+            });
+        }
+        
+        // Main animation loop
+        function animate() {
+            // Update for Electron Flow
+            definePaths(electronCanvas); // Redefine paths in case switch state changed
+            drawCircuit(eCtx, electronCanvas, 'electron');
+            updateParticles(electronParticles, electronPath, particleSpeed);
+            drawParticles(eCtx, electronParticles, '#38bdf8'); // Tailwind sky-500 for electrons
+
+            // Update for Conventional Flow
+            definePaths(conventionalCanvas); // Redefine paths
+            drawCircuit(cCtx, conventionalCanvas, 'conventional');
+            updateParticles(conventionalParticles, conventionalPath, particleSpeed);
+            drawParticles(cCtx, conventionalParticles, '#fbbf24'); // Tailwind amber-400 for conventional
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // Resize handler
+        function handleResize() {
+            // Set canvas internal dimensions to match CSS dimensions
+            // Electron Canvas
+            electronCanvas.width = electronCanvas.clientWidth;
+            electronCanvas.height = electronCanvas.clientHeight > 0 ? electronCanvas.clientHeight : 250; // Fallback height
+            
+            // Conventional Canvas
+            conventionalCanvas.width = conventionalCanvas.clientWidth;
+            conventionalCanvas.height = conventionalCanvas.clientHeight > 0 ? conventionalCanvas.clientHeight : 250; // Fallback height
+
+            // Re-initialize paths and particles as their positions depend on canvas size
+            definePaths(electronCanvas);
+            initParticles(electronPath, electronParticles);
+            definePaths(conventionalCanvas);
+            initParticles(conventionalPath, conventionalParticles);
+
+            // Redraw immediately after resize
+            drawCircuit(eCtx, electronCanvas, 'electron');
+            drawParticles(eCtx, electronParticles, '#38bdf8');
+            drawCircuit(cCtx, conventionalCanvas, 'conventional');
+            drawParticles(cCtx, conventionalParticles, '#fbbf24');
+        }
+
+        // Event Listeners
+        toggleSwitchBtn.addEventListener('click', () => {
+            isCircuitOn = !isCircuitOn;
+            toggleSwitchBtn.textContent = `Toggle Switch: ${isCircuitOn ? 'ON' : 'OFF'}`;
+            toggleSwitchBtn.classList.toggle('bg-sky-500', !isCircuitOn);
+            toggleSwitchBtn.classList.toggle('hover:bg-sky-600', !isCircuitOn);
+            toggleSwitchBtn.classList.toggle('bg-green-500', isCircuitOn);
+            toggleSwitchBtn.classList.toggle('hover:bg-green-600', isCircuitOn);
+
+            if (isCircuitOn) {
+                // If turning on, (re)define paths for closed switch and re-init particles for smooth start
+                definePaths(electronCanvas); 
+                initParticles(electronPath, electronParticles); // Reset particle positions for a clean start
+                definePaths(conventionalCanvas);
+                initParticles(conventionalPath, conventionalParticles);
+
+                if (!animationFrameId) { // Start animation if not already running
+                    animate();
+                }
+            } else {
+                // When turning off, particles stop, circuit drawn open.
+                // No need to cancel animationFrameId here if we want particles to remain visible
+                // but stop moving. The updateParticles function checks isCircuitOn.
+                // However, to save resources, one might cancel it. For this demo, let's keep it simple.
+                // The paths will be redrawn with an open switch in the next animation frame.
+                drawCircuit(eCtx, electronCanvas, 'electron'); // Redraw immediately to show open switch
+                drawCircuit(cCtx, conventionalCanvas, 'conventional'); // Redraw immediately
+            }
+        });
+
+        resetAnimationBtn.addEventListener('click', () => {
+            // isCircuitOn = false; // Optionally turn off the circuit on reset
+            // toggleSwitchBtn.textContent = `Toggle Switch: ${isCircuitOn ? 'ON' : 'OFF'}`;
+            // toggleSwitchBtn.classList.add('bg-sky-500');
+            // toggleSwitchBtn.classList.remove('bg-green-500');
+
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            
+            definePaths(electronCanvas); // Ensure paths are for current switch state
+            initParticles(electronPath, electronParticles);
+            drawCircuit(eCtx, electronCanvas, 'electron');
+            drawParticles(eCtx, electronParticles, isCircuitOn ? '#38bdf8' : 'transparent');
+
+
+            definePaths(conventionalCanvas);
+            initParticles(conventionalPath, conventionalParticles);
+            drawCircuit(cCtx, conventionalCanvas, 'conventional');
+            drawParticles(cCtx, conventionalParticles, isCircuitOn ? '#fbbf24' : 'transparent');
+
+            if (isCircuitOn && !animationFrameId) { // Restart animation if it was on
+                 animate();
+            }
+        });
+        
+        // Initial setup
+        window.addEventListener('load', () => {
+            handleResize(); // Initial sizing and drawing
+            // Animation won't start until switch is toggled on
+            drawCircuit(eCtx, electronCanvas, 'electron'); // Initial draw with switch off
+            drawCircuit(cCtx, conventionalCanvas, 'conventional'); // Initial draw
+        });
+        window.addEventListener('resize', handleResize);
+
+    </script>
+</body>
+</html>
